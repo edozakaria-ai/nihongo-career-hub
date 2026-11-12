@@ -1,12 +1,15 @@
-import type { HTMLAttributes } from "react";
+import type { ElementType, HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {
+interface CardProps extends HTMLAttributes<HTMLElement> {
   interactive?: boolean;
   as?: "div" | "article" | "section" | "li";
 }
 
-export function Card({ className, interactive, as: Tag = "div", ...props }: CardProps) {
+export function Card({ className, interactive, as = "div", ...props }: CardProps) {
+  // ElementType dipakai agar elemen pembungkus bisa berganti (div/article/section/li)
+  // tanpa konflik tipe event handler antar-elemen HTML.
+  const Tag: ElementType = as;
   return (
     <Tag
       className={cn(
