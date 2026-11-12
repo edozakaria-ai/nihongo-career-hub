@@ -5,6 +5,8 @@
 /* ── Design tokens (RGB tanpa koma agar mendukung opacity Tailwind) ── */
 @layer base {
   :root {
+    --font-sans: "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --font-jp: "Yu Gothic UI", "Yu Gothic", "Meiryo", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
     --canvas: 246 246 248;      /* latar halaman: abu-abu lembut */
     --surface: 255 255 255;     /* card, header */
     --surface-muted: 241 241 244;
