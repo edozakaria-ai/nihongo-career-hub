@@ -1,58 +1,64 @@
 # Project State — Nihongo Career Hub
-_Diperbarui: Tahap 1 selesai_
+_Diperbarui: Tahap 2 selesai (Kanji, Kotoba, Bunpou, Dokkai)_
 
 ## Stack teknologi
-Next.js 14.2 (App Router) · React 18.3 · TypeScript 5 (strict) · Tailwind CSS 3.4 (darkMode: class) · clsx · zod (disiapkan) · Supabase (`@supabase/supabase-js`, `@supabase/ssr` — disiapkan, belum dipakai)
+Next.js 14.2.35 (App Router) · React 18.3 · TypeScript 5 (strict) · Tailwind CSS 3.4 (darkMode: class) · clsx · zod (disiapkan) · Supabase (disiapkan, belum dipakai) · Deploy: GitHub → Vercel (Framework Preset: Next.js)
 
 ## Struktur folder terkini
 ```
 docs/ARCHITECTURE.md, docs/PROJECT_STATE.md
 supabase/migrations/0001_init_schema.sql
 src/app/            layout.tsx, page.tsx, globals.css, loading.tsx, error.tsx, not-found.tsx, robots.ts, sitemap.ts
-src/app/{dashboard,kanji,kotoba,bunpou,dokkai,latihan,career,profil,login,register,admin}/page.tsx
-src/components/layout/  Header.tsx, Footer.tsx, Logo.tsx, ThemeToggle.tsx
-src/components/ui/      Button.tsx, Card.tsx, Badge.tsx, ProgressBar.tsx, SectionHeading.tsx, Furigana.tsx, ComingSoon.tsx
-src/components/home/    Hero.tsx, LevelPicker.tsx, ModuleGrid.tsx, ProgressOverview.tsx, DailyWord.tsx, LatestJobs.tsx
-src/data/               kanji.ts, vocabulary.ts, grammar.ts, readings.ts, questions.ts, jobs.ts, candidates.ts, user-progress.ts, index.ts
-src/lib/                types.ts, constants.ts, utils.ts, ruby.ts, seo.ts, theme.ts
+src/app/kanji/      page.tsx, [id]/page.tsx
+src/app/kotoba/     page.tsx
+src/app/bunpou/     page.tsx, [slug]/page.tsx
+src/app/dokkai/     page.tsx, [slug]/page.tsx
+src/app/{dashboard,latihan,career,profil,login,register,admin}/page.tsx   (placeholder)
+src/components/layout/  Header, Footer, Logo, ThemeToggle
+src/components/ui/      Button, Card, Badge, ProgressBar, SectionHeading, Furigana, ComingSoon, Breadcrumb, EmptyState, LevelTabs
+src/components/home/    Hero, LevelPicker, ModuleGrid, ProgressOverview, DailyWord, LatestJobs
+src/components/learn/   ChoiceQuestion, ExampleList, FavoriteButton, StatusControl
+src/components/kanji/   KanjiExplorer, KanjiQuiz
+src/components/kotoba/  KotobaSearch, VocabCard
+src/components/bunpou/  GrammarPractice
+src/components/dokkai/  ReadingPlayer
+src/data/               kanji, vocabulary, grammar, grammar-exercises, readings, questions, jobs, candidates, user-progress, index
+src/lib/                types, constants, utils, ruby, seo, theme, kana, search, storage, quiz, params
 ```
 
 ## Fitur selesai
-- Fondasi proyek, konfigurasi TS/Tailwind/ESLint, header keamanan HTTP
-- Sistem desain (token warna light/dark, tipografi, tombol, card, badge, progress bar)
-- Navigasi responsif + menu mobile (Esc, aria-expanded), skip link, dark mode tanpa kedipan
-- Beranda lengkap: hero + CTA, progres, target harian/mingguan, rekomendasi berikutnya, pilihan level, ringkasan modul, kosakata harian, lowongan terbaru
-- Metadata SEO + Open Graph per halaman, robots.txt, sitemap.xml, loading/error/404
-- 11 rute aktif (placeholder "Dijadwalkan pada Tahap N" — tanpa link mati)
-- Data contoh orisinal: 9 kanji, 13 kosakata, 8 bunpou, 3 dokkai (6 soal), 12 soal latihan, 4 lowongan, 3 kandidat
-- Skema database Supabase lengkap + RLS (belum diterapkan)
+- Tahap 1: fondasi, sistem desain, navigasi, dark mode, beranda, SEO dasar, skema DB + RLS
+- Kanji: daftar + filter (level, goresan, kategori, status/favorit), detail (arti, on/kun, mnemonik, tempat diagram goresan, kosakata, contoh berfurigana), favorit, status belajar, kuis pilihan ganda + input bacaan (hiragana/romaji)
+- Kotoba: pencarian kanji/hiragana/katakana/romaji/Indonesia/Inggris, autocomplete (combobox ARIA, panah/Enter/Esc), riwayat, filter level, simpan kosakata, kata terkait, empty state
+- Bunpou: daftar per level (tab URL), detail (arti, struktur, situasi, formalitas, contoh, perbandingan, kesalahan umum), 3 latihan (pilihan ganda, menyusun kalimat, melengkapi)
+- Dokkai: daftar per level, toggle furigana, kosakata penting, pertanyaan + pembahasan, skor, terjemahan terkunci sampai submit, riwayat pengerjaan
+- Sitemap mencakup halaman detail kanji/bunpou/dokkai
 
 ## Belum selesai
-- Tahap 2: halaman kanji/kotoba (search, autocomplete, riwayat), bunpou, dokkai (toggle furigana, skor)
-- Tahap 3: mesin latihan & simulasi berwaktu, dashboard belajar, XP/badge, grafik
-- Tahap 4: career marketplace (kandidat, HR, lamaran, laporan)
+- Tahap 3: latihan JLPT per topik & simulasi berwaktu, analisis kemampuan, daftar jawaban salah, dashboard belajar (XP, streak, badge, grafik) dari data nyata localStorage
+- Tahap 4: career marketplace
 - Tahap 5: auth Supabase, repository layer, admin, validasi zod server, tes otomatis
 
 ## Keputusan desain & arsitektur
-- Data contoh terpisah di `src/data`, bentuk 1:1 dengan kolom DB (camelCase ↔ snake_case)
-- Furigana disimpan sebagai notasi `漢字{かんじ}`, dirender aman via `<Furigana>`
-- Server Components default; client hanya untuk interaksi (Header, ThemeToggle)
-- RBAC di DB lewat `app_role()`/`is_admin()` + RLS; peran admin tidak bisa dipilih saat daftar
-- Kandidat dicari lewat view `candidate_public` (tanpa kontak, opt-in `is_public` + `consent_at`)
-- Lowongan baru selalu `verified = false` sampai admin memverifikasi
-- Level JLPT kandidat opsional — bukan satu-satunya ukuran kemampuan
+- Data contoh di `src/data`, bentuk 1:1 dengan kolom DB
+- Progres prototipe disimpan di localStorage via `src/lib/storage.ts` (kunci: nch-learning, nch-saved-words, nch-search-history, nch-dokkai-history, nch-theme). Tahap 5 mengganti implementasi hook, bukan komponen
+- Kunci item belajar: `kanji:<id>`, `grammar:<id>`, `reading:<id>`
+- Filter level halaman daftar memakai parameter URL `?level=` yang divalidasi whitelist (`lib/params.ts`)
+- Kuis memakai pengacakan deterministik (`lib/quiz.ts`) untuk menghindari hydration mismatch
+- Pencarian tanpa regex dari input pengguna; input dinormalisasi NFKC dan dibatasi panjangnya
+- Furigana notasi `漢字{かんじ}`, dirender aman tanpa dangerouslySetInnerHTML
+- Font memakai font sistem (tanpa next/font/google) agar build Vercel stabil
 
 ## Skema database terkini
-Enum: jlpt_level, user_role, learning_status, formality, question_cat, content_source, exercise_mode, job_role, employment_type, work_mode, application_stage, report_target, report_status.
-Tabel: profiles, kanji, vocabulary, grammar, reading_lessons, exercises, questions, exercise_questions, learning_progress, attempts, saved_words, achievements, user_achievements, user_stats, companies, recruiter_profiles, candidate_profiles, jobs, job_applications, saved_jobs, saved_candidates, reports. View: candidate_public.
+Tidak berubah dari Tahap 1 (lihat supabase/migrations/0001_init_schema.sql). Latihan bunpou (`grammar-exercises.ts`) nantinya dipetakan ke tabel `exercises` + `questions` dengan kolom tambahan `type` (mc | order | fill) — migrasi 0002 di Tahap 5.
 
 ## Bug / technical debt
-- Belum diverifikasi dengan `npm run build` di lingkungan nyata (lingkungan pembuatan tidak memiliki paket Next.js); validasi dilakukan dengan transpile TS per file + cek resolusi import
-- Progres beranda memakai `DEMO_PROGRESS` statis
-- `diagram urutan goresan` masih null
-- Policy `app_withdraw` mengizinkan kandidat meng-update baris lamarannya secara umum → batasi ke `stage = 'ditarik'` via trigger (Tahap 5)
-- Kontak kandidat masih satu tabel dengan profil; pertimbangkan tabel `candidate_contacts` terpisah
-- Belum ada unit/E2E test
+- Diagram urutan goresan masih placeholder
+- Status/favorit hanya tersimpan di perangkat (localStorage) sampai Tahap 5
+- Beranda masih memakai DEMO_PROGRESS statis (akan dihubungkan di Tahap 3)
+- Next.js 15 / ESLint 9 belum dimigrasi (ditunda: perubahan `params` menjadi Promise berisiko memecah build)
+- Policy `app_withdraw` perlu dibatasi; kontak kandidat sebaiknya tabel terpisah
+- Belum ada tes otomatis
 
 ## Langkah berikutnya
-Tahap 2 — Kanji (daftar + filter level/goresan/kategori/status + detail + kuis), Kotoba (search multi-skrip + autocomplete + riwayat + simpan), Bunpou (detail + 3 jenis latihan), Dokkai (toggle furigana, terjemahan setelah mencoba, skor, riwayat di localStorage).
+Tahap 3 — Latihan JLPT (mode topik & mode ujian berwaktu, skor, pembahasan, analisis per kategori, daftar jawaban salah, rekomendasi materi) dan Dashboard Belajar (XP, level, streak, badge, target mingguan, grafik, statistik kanji/kosakata dari localStorage).
