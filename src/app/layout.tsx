@@ -1,13 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_JP, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { themeInitScript } from "@/lib/theme";
 import { SITE } from "@/lib/constants";
-
-const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
-const jp = Noto_Sans_JP({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-jp", display: "swap", preload: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -30,7 +26,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={`${sans.variable} ${jp.variable}`} suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning>
       <head>
         {/* Terapkan tema sebelum render pertama untuk mencegah kedipan */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
