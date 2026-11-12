@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens (RGB tanpa koma agar mendukung opacity Tailwind) ── */
+@layer base {
+  :root {
+    --canvas: 246 246 248;      /* latar halaman: abu-abu lembut */
+    --surface: 255 255 255;     /* card, header */
+    --surface-muted: 241 241 244;
+    --ink: 28 28 33;            /* teks utama: kontras ≥ 12:1 terhadap putih */
+    --ink-muted: 90 90 102;     /* teks sekunder: kontras ≥ 6:1 */
+    --line: 228 228 234;
+    color-scheme: light;
+  }
+
+  .dark {
+    --canvas: 18 18 22;
+    --surface: 28 28 34;
+    --surface-muted: 38 38 46;
+    --ink: 240 240 244;
+    --ink-muted: 170 170 184;
+    --line: 52 52 62;
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+  }
+
+  ruby rt {
+    font-size: 0.5em;
+    font-weight: 500;
+    color: rgb(var(--ink-muted));
+  }
+
+  /* Sembunyikan furigana bila leluhur memiliki .furigana-off (toggle di Dokkai) */
+  .furigana-off rt,
+  .furigana-off rp {
+    visibility: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
