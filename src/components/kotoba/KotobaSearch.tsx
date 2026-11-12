@@ -5,6 +5,7 @@ import type { JlptLevel, Vocabulary } from "@/lib/types";
 import { searchVocabulary, type SearchHit } from "@/lib/search";
 import { useLocalStorage } from "@/lib/storage";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { LevelFilter, countByLevel, type LevelValue } from "@/components/ui/LevelFilter";
 import { VocabCard } from "./VocabCard";
 import { cn } from "@/lib/utils";
 
@@ -18,9 +19,9 @@ const MATCH_LABEL: Record<SearchHit["matchedOn"], string> = {
 const HISTORY_MAX = 8;
 const EXAMPLES = ["会議", "はたらく", "kakunin", "air", "product", "セイヒン"];
 
-export function KotobaSearch({ items }: { items: Vocabulary[] }) {
+export function KotobaSearch({ items, initialLevel = "all" }: { items: Vocabulary[]; initialLevel?: JlptLevel | "all" }) {
   const [query, setQuery] = useState("");
-  const [level, setLevel] = useState<JlptLevel | "all">("all");
+  const [level, setLevel] = useState<LevelValue>(initialLevel);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [onlySaved, setOnlySaved] = useState(false);
@@ -31,6 +32,9 @@ export function KotobaSearch({ items }: { items: Vocabulary[] }) {
 
   const hits = useMemo(() => searchVocabulary(items, query, level), [items, query, level]);
   const suggestions = hits.slice(0, 6);
+  // Jumlah per level: dari hasil pencarian bila ada kata kunci, atau seluruh kosakata
+  const allHits = useMemo(() => searchVocabulary(items, query, "all"), [items, query]);
+  const levelCounts = useMemo(() => countByLevel(query.trim() ? allHits.map((h) => h.item) : items), [allHits, items, query]);
   const trimmed = query.trim();
 
   const browseList = useMemo(() => {
@@ -145,16 +149,7 @@ export function KotobaSearch({ items }: { items: Vocabulary[] }) {
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <label htmlFor="kotoba-level" className="text-xs font-semibold text-ink-muted">Level</label>
-          <select
-            id="kotoba-level"
-            value={level}
-            onChange={(e) => setLevel(e.target.value as JlptLevel | "all")}
-            className="h-9 rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-          >
-            <option value="all">Semua</option>
-            {(["N5", "N4", "N3", "N2"] as const).map((l) => <option key={l} value={l}>{l}</option>)}
-          </select>
+          <LevelFilter value={level} onChange={setLevel} counts={levelCounts} />
           <label className="inline-flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" checked={onlySaved} onChange={(e) => setOnlySaved(e.target.checked)} className="h-4 w-4 accent-brand-500" />
             Hanya kosakata tersimpan ({saved.length})

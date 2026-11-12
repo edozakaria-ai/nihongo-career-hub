@@ -27,6 +27,13 @@ function Difficulty({ value }: { value: number }) {
 export default function DokkaiPage({ searchParams }: { searchParams: { level?: string | string[] } }) {
   const level = parseLevelParam(searchParams.level);
   const list = level === "all" ? READINGS : READINGS.filter((r) => r.level === level);
+  const counts = {
+    all: READINGS.length,
+    N5: READINGS.filter((r) => r.level === "N5").length,
+    N4: READINGS.filter((r) => r.level === "N4").length,
+    N3: READINGS.filter((r) => r.level === "N3").length,
+    N2: READINGS.filter((r) => r.level === "N2").length,
+  };
 
   return (
     <div className="container py-8 sm:py-10">
@@ -36,7 +43,7 @@ export default function DokkaiPage({ searchParams }: { searchParams: { level?: s
         </h1>
         <p className="mt-1 text-ink-muted">Semua bacaan ditulis orisinal oleh platform. Terjemahan dibuka setelah kamu mencoba menjawab.</p>
       </header>
-      <LevelTabs basePath="/dokkai" active={level} />
+      <LevelTabs basePath="/dokkai" active={level} counts={counts} />
       {list.length === 0 ? (
         <EmptyState title="Belum ada bacaan untuk level ini" description="Bacaan baru akan segera ditambahkan." />
       ) : (

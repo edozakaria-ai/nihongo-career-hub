@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { JlptLevel, Kanji, LearningStatus } from "@/lib/types";
 import { useLearningState } from "@/lib/storage";
+import { searchKanji } from "@/lib/search";
+import { LevelFilter, countByLevel, type LevelValue } from "@/components/ui/LevelFilter";
+import { SearchBox } from "@/components/ui/SearchBox";
 import { LevelBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FavoriteButton } from "@/components/learn/FavoriteButton";
@@ -34,7 +37,8 @@ const selectClass =
   "h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40";
 
 export function KanjiExplorer({ kanji, initialLevel }: { kanji: Kanji[]; initialLevel: JlptLevel | "all" }) {
-  const [level, setLevel] = useState<JlptLevel | "all">(initialLevel);
+  const [query, setQuery] = useState("");
+  const [level, setLevel] = useState<LevelValue>(initialLevel);
   const [stroke, setStroke] = useState<StrokeRange>("all");
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -42,7 +46,11 @@ export function KanjiExplorer({ kanji, initialLevel }: { kanji: Kanji[]; initial
 
   const categories = useMemo(() => Array.from(new Set(kanji.map((k) => k.category))).sort(), [kanji]);
 
-  const filtered = kanji.filter((k) => {
+  // Pencarian dulu (urut relevansi), lalu filter level & lainnya
+  const searched = useMemo(() => searchKanji(kanji, query), [kanji, query]);
+  const levelCounts = useMemo(() => countByLevel(searched), [searched]);
+
+  const filtered = searched.filter((k) => {
     if (level !== "all" && k.level !== level) return false;
     if (!inRange(k.strokeCount, stroke)) return false;
     if (category !== "all" && k.category !== category) return false;
@@ -54,6 +62,7 @@ export function KanjiExplorer({ kanji, initialLevel }: { kanji: Kanji[]; initial
   });
 
   function reset() {
+    setQuery("");
     setLevel("all");
     setStroke("all");
     setCategory("all");
@@ -62,14 +71,16 @@ export function KanjiExplorer({ kanji, initialLevel }: { kanji: Kanji[]; initial
 
   return (
     <div>
-      <form className="grid gap-3 rounded-card border border-line bg-surface p-4 shadow-card sm:grid-cols-2 lg:grid-cols-4" onSubmit={(e) => e.preventDefault()} aria-label="Filter kanji">
-        <div>
-          <label htmlFor="f-level" className="mb-1 block text-xs font-semibold text-ink-muted">Level JLPT</label>
-          <select id="f-level" className={selectClass} value={level} onChange={(e) => setLevel(e.target.value as JlptLevel | "all")}>
-            <option value="all">Semua level</option>
-            {(["N5", "N4", "N3", "N2"] as const).map((l) => <option key={l} value={l}>{l}</option>)}
-          </select>
-        </div>
+      <div className="space-y-4 rounded-card border border-line bg-surface p-4 shadow-card">
+        <SearchBox
+          value={query}
+          onChange={setQuery}
+          label="Cari kanji"
+          placeholder="mis. 会, kai, あう, bertemu, rapat"
+          help="Cari dengan karakter kanji, arti Indonesia, onyomi/kunyomi (kana atau romaji), atau kosakata contoh."
+        />
+        <LevelFilter value={level} onChange={setLevel} counts={levelCounts} />
+      <form className="grid gap-3 sm:grid-cols-3" onSubmit={(e) => e.preventDefault()} aria-label="Filter kanji lainnya">
         <div>
           <label htmlFor="f-stroke" className="mb-1 block text-xs font-semibold text-ink-muted">Jumlah goresan</label>
           <select id="f-stroke" className={selectClass} value={stroke} onChange={(e) => setStroke(e.target.value as StrokeRange)}>
@@ -94,9 +105,11 @@ export function KanjiExplorer({ kanji, initialLevel }: { kanji: Kanji[]; initial
           </select>
         </div>
       </form>
+      </div>
 
       <p className="my-4 text-sm text-ink-muted" aria-live="polite">
         Menampilkan <strong className="text-ink">{filtered.length}</strong> dari {kanji.length} kanji
+        {query.trim() && <> untuk “{query.trim()}”</>}
       </p>
 
       {filtered.length === 0 ? (

@@ -1,5 +1,5 @@
 # Project State — Nihongo Career Hub
-_Diperbarui: Tahap 2 selesai (Kanji, Kotoba, Bunpou, Dokkai)_
+_Diperbarui: Tahap 2 + update pencarian & filter level_
 
 ## Stack teknologi
 Next.js 14.2.35 (App Router) · React 18.3 · TypeScript 5 (strict) · Tailwind CSS 3.4 (darkMode: class) · clsx · zod (disiapkan) · Supabase (disiapkan, belum dipakai) · Deploy: GitHub → Vercel (Framework Preset: Next.js)
@@ -13,14 +13,16 @@ src/app/kanji/      page.tsx, [id]/page.tsx
 src/app/kotoba/     page.tsx
 src/app/bunpou/     page.tsx, [slug]/page.tsx
 src/app/dokkai/     page.tsx, [slug]/page.tsx
-src/app/{dashboard,latihan,career,profil,login,register,admin}/page.tsx   (placeholder)
+src/app/latihan/     page.tsx (mode latihan per topik)
+src/app/{dashboard,career,profil,login,register,admin}/page.tsx   (placeholder)
 src/components/layout/  Header, Footer, Logo, ThemeToggle
-src/components/ui/      Button, Card, Badge, ProgressBar, SectionHeading, Furigana, ComingSoon, Breadcrumb, EmptyState, LevelTabs
+src/components/ui/      Button, Card, Badge, ProgressBar, SectionHeading, Furigana, ComingSoon, Breadcrumb, EmptyState, LevelTabs, LevelFilter, SearchBox
 src/components/home/    Hero, LevelPicker, ModuleGrid, ProgressOverview, DailyWord, LatestJobs
 src/components/learn/   ChoiceQuestion, ExampleList, FavoriteButton, StatusControl
 src/components/kanji/   KanjiExplorer, KanjiQuiz
 src/components/kotoba/  KotobaSearch, VocabCard
-src/components/bunpou/  GrammarPractice
+src/components/bunpou/  GrammarPractice, BunpouExplorer
+src/components/latihan/ PracticeExplorer
 src/components/dokkai/  ReadingPlayer
 src/data/               kanji, vocabulary, grammar, grammar-exercises, readings, questions, jobs, candidates, user-progress, index
 src/lib/                types, constants, utils, ruby, seo, theme, kana, search, storage, quiz, params
@@ -33,9 +35,12 @@ src/lib/                types, constants, utils, ruby, seo, theme, kana, search,
 - Bunpou: daftar per level (tab URL), detail (arti, struktur, situasi, formalitas, contoh, perbandingan, kesalahan umum), 3 latihan (pilihan ganda, menyusun kalimat, melengkapi)
 - Dokkai: daftar per level, toggle furigana, kosakata penting, pertanyaan + pembahasan, skor, terjemahan terkunci sampai submit, riwayat pengerjaan
 - Sitemap mencakup halaman detail kanji/bunpou/dokkai
+- Mesin pencarian di tab Kanji (karakter, arti, on/kun kana/romaji, kosakata contoh), Kotoba (6 cara input), Bunpou (pola kana/romaji, arti, struktur, situasi)
+- Filter level JLPT (tombol pil + jumlah item, sinkron ke ?level=) di Kanji, Kotoba, Bunpou, Latihan; tab level berbasis URL + jumlah di Dokkai
+- Latihan JLPT mode per topik: filter level & kategori, pembahasan, skor sesi, daftar jawaban salah + tautan materi
 
 ## Belum selesai
-- Tahap 3: latihan JLPT per topik & simulasi berwaktu, analisis kemampuan, daftar jawaban salah, dashboard belajar (XP, streak, badge, grafik) dari data nyata localStorage
+- Tahap 3: mode ujian berwaktu, analisis kemampuan, daftar jawaban salah, dashboard belajar (XP, streak, badge, grafik) dari data nyata localStorage
 - Tahap 4: career marketplace
 - Tahap 5: auth Supabase, repository layer, admin, validasi zod server, tes otomatis
 
@@ -53,6 +58,7 @@ src/lib/                types, constants, utils, ruby, seo, theme, kana, search,
 Tidak berubah dari Tahap 1 (lihat supabase/migrations/0001_init_schema.sql). Latihan bunpou (`grammar-exercises.ts`) nantinya dipetakan ke tabel `exercises` + `questions` dengan kolom tambahan `type` (mc | order | fill) — migrasi 0002 di Tahap 5.
 
 ## Bug / technical debt
+- Konten masih data contoh (9 kanji, 13 kosakata, 8 bunpou, 3 dokkai, 12 soal) — perlu impor kamus terbuka berlisensi (KANJIDIC2/JMdict, KanjiVG) + penambahan materi orisinal bertahap
 - Diagram urutan goresan masih placeholder
 - Status/favorit hanya tersimpan di perangkat (localStorage) sampai Tahap 5
 - Beranda masih memakai DEMO_PROGRESS statis (akan dihubungkan di Tahap 3)

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { VOCABULARY } from "@/data";
 import { pageMetadata } from "@/lib/seo";
+import { parseLevelParam } from "@/lib/params";
 import { KotobaSearch } from "@/components/kotoba/KotobaSearch";
 
 export const metadata: Metadata = pageMetadata({
@@ -9,7 +10,8 @@ export const metadata: Metadata = pageMetadata({
   path: "/kotoba",
 });
 
-export default function KotobaPage() {
+export default function KotobaPage({ searchParams }: { searchParams: { level?: string | string[] } }) {
+  const initialLevel = parseLevelParam(searchParams.level);
   return (
     <div className="container py-8 sm:py-10">
       <header className="mb-6">
@@ -18,7 +20,7 @@ export default function KotobaPage() {
         </h1>
         <p className="mt-1 text-ink-muted">Mesin pencarian kosakata. Kosakata tersimpan dan riwayat pencarian disimpan di perangkat ini.</p>
       </header>
-      <KotobaSearch items={VOCABULARY} />
+      <KotobaSearch key={initialLevel} items={VOCABULARY} initialLevel={initialLevel} />
       <p className="mt-8 text-xs text-ink-muted">
         Data kosakata saat ini adalah contoh orisinal platform. Integrasi kamus berlisensi terbuka akan menyertakan atribusi sumber.
       </p>
