@@ -7,7 +7,8 @@ import { VOCAB_N2 } from "./vocab-n2";
 import { KANJI_N5 } from "./kanji-n5";
 import { KANJI_N4 } from "./kanji-n4";
 import { KANJI_N3 } from "./kanji-n3";
+import { KANJI_N2 } from "./kanji-n2";
 
 export const OPEN_VOCABULARY: Vocabulary[] = [...VOCAB_N5, ...VOCAB_N4, ...VOCAB_N3, ...VOCAB_N2].map(toVocabulary);
 
-export const OPEN_KANJI: Kanji[] = [...KANJI_N5, ...KANJI_N4, ...KANJI_N3].map(toKanji);
+export const OPEN_KANJI: Kanji[] = [...KANJI_N5, ...KANJI_N4, ...KANJI_N3, ...KANJI_N2].map(toKanji);
