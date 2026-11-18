@@ -639,10 +639,3 @@ export const VOCAB_N4: VocabRaw[] = [
   {"word":"先輩","reading":"せんぱい","romaji":"senpai","level":"N4","meaningId":["senior (di tempat kerja atau sekolah)","atasan"],"pos":"nomina","examples":[{"jp":"私{わたし}たちは彼{かれ}をよき先輩として尊敬{そんけい}している。","translation":"Kami menghormatinya sebagai senior yang baik."}]},
   {"word":"利用","reading":"りよう","romaji":"riyou","level":"N4","meaningId":["penggunaan","pemanfaatan"],"pos":"nomina","examples":[{"jp":"休暇{きゅうか}をできるだけ上手{うま}く利用しなさい。","translation":"Manfaatkan liburanmu sebaik-baiknya."}]},
 ];
-
-import type { Vocabulary } from "@/lib/types";
-import { toVocabulary } from "./schema";
-import { VOCAB_N5 } from "./vocab-n5";
-import { VOCAB_N4 } from "./vocab-n4";
-
-export const OPEN_VOCABULARY: Vocabulary[] = [...VOCAB_N5, ...VOCAB_N4].map(toVocabulary);
