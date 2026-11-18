@@ -1,6 +1,7 @@
-import type { ExampleSentence, JlptLevel, PartOfSpeech, Vocabulary } from "@/lib/types";
+import type { ExampleSentence, JlptLevel, Kanji, PartOfSpeech, Vocabulary } from "@/lib/types";
 
-/** Format ringkas kotoba hasil impor (alat APKG / konverter). */
+/* ════════════════ KOTOBA ════════════════ */
+
 export interface VocabRaw {
   word: string;
   reading: string;
@@ -13,7 +14,6 @@ export interface VocabRaw {
   tags?: string[];
 }
 
-/** Hash FNV-1a ke base36 untuk id yang stabil. */
 function stableId(text: string): string {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) {
@@ -39,5 +39,37 @@ export function toVocabulary(r: VocabRaw): Vocabulary {
     level: r.level,
     examples: r.examples ?? [],
     tags: r.tags,
+  };
+}
+
+/* ════════════════ KANJI ════════════════ */
+
+export interface KanjiRaw {
+  char: string;
+  level: JlptLevel;
+  strokes: number;
+  on: string[];
+  kun: string[];
+  meaningId: string[];
+  category?: string;
+  mnemonic?: string;
+  vocab?: { word: string; reading: string; meaning: string }[];
+  examples?: ExampleSentence[];
+}
+
+export function toKanji(r: KanjiRaw): Kanji {
+  return {
+    id: "k-" + (r.char.codePointAt(0) ?? 0).toString(16),
+    character: r.char,
+    level: r.level,
+    meanings: r.meaningId,
+    onyomi: r.on,
+    kunyomi: r.kun,
+    strokeCount: r.strokes,
+    category: r.category ?? "Umum",
+    strokeOrderSvg: null,
+    mnemonic: r.mnemonic ?? "Mnemonik belum tersedia.",
+    vocabulary: r.vocab ?? [],
+    examples: r.examples ?? [],
   };
 }
