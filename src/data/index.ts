@@ -1,9 +1,10 @@
-import type { JlptLevel, Kanji, Vocabulary } from "@/lib/types";
+import type { GrammarPoint, JlptLevel, Kanji, Vocabulary } from "@/lib/types";
 import { KANJI as CURATED_KANJI } from "./kanji";
 import { VOCABULARY as CURATED_VOCABULARY } from "./vocabulary";
+import { GRAMMAR as CURATED_GRAMMAR } from "./grammar";
 import { OPEN_KANJI, OPEN_VOCABULARY } from "./open";
+import { GRAMMAR_N5 } from "./open/grammar-n5";
 
-export { GRAMMAR } from "./grammar";
 export { READINGS } from "./readings";
 export { QUESTIONS } from "./questions";
 export { JOBS, COMPANIES } from "./jobs";
@@ -31,6 +32,17 @@ export const KANJI: Kanji[] = [
   ...OPEN_KANJI.filter((k) => {
     if (seenKanji.has(k.character)) return false;
     seenKanji.add(k.character);
+    return true;
+  }),
+].sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level]);
+
+// Bunpou: data kurasi + data per level, tanpa duplikat (kunci: slug), urut N5 → N2
+const seenGrammar = new Set(CURATED_GRAMMAR.map((g) => g.slug));
+export const GRAMMAR: GrammarPoint[] = [
+  ...CURATED_GRAMMAR,
+  ...GRAMMAR_N5.filter((g) => {
+    if (seenGrammar.has(g.slug)) return false;
+    seenGrammar.add(g.slug);
     return true;
   }),
 ].sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level]);
