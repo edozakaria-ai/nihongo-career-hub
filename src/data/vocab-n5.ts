@@ -1,6 +1,6 @@
 // ════════════════════════════════════════════════════════════════════
 // Kotoba — level N5 (667 entri)
-// Dihasilkan oleh tools/apkg-ke-kotoba.html pada 2026-11-12.
+// Dihasilkan oleh tools/apkg-ke-kotoba.html pada 2026-11-18.
 // Sumber: JLPT-N5-N1-Kotoba-Anki-Bahasa-Indonesia (mizoarkatamarenaldy, GPL-3.0),
 //   fork dari coolmule0/JLPT-N5-N1-Japanese-Vocabulary-Anki. Daftar level: tanos.co.uk (J. Waller, CC BY);
 //   kamus: JMdict (EDRDG, CC BY-SA 4.0); contoh kalimat: Tatoeba (CC BY 2.0 FR).
