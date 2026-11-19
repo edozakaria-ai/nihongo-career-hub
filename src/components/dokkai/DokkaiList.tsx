@@ -30,7 +30,7 @@ const LEVEL_OPTIONS: { value: LevelValue; label: string }[] = [
 ];
 
 /** Jumlah bacaan per halaman. */
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 function formatDate(iso: string) {
   const d = new Date(iso + "T00:00:00");
