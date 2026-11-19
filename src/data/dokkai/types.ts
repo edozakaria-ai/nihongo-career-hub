@@ -12,3 +12,6 @@ export interface NewsReading extends ReadingLesson {
   grammar: string[];
   source: { label: string; url?: string };
 }
+
+/** Bacaan di antrean: sama seperti NewsReading, tetapi tanggal diisi otomatis oleh penjadwal. */
+export type QueuedReading = Omit<NewsReading, "date">;

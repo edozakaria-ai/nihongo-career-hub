@@ -1,16 +1,19 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/constants";
 import { GRAMMAR, KANJI } from "@/data";
-import { ALL_READINGS } from "@/data/dokkai";
+import { publishedReadings } from "@/data/dokkai";
 
 const PUBLIC_ROUTES = ["", "/kanji", "/kotoba", "/bunpou", "/dokkai", "/latihan", "/career", "/login", "/register"];
+
+// Diperbarui tiap jam agar bacaan yang baru terbit ikut masuk sitemap
+export const revalidate = 3600;
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
   const staticRoutes: MetadataRoute.Sitemap = PUBLIC_ROUTES.map((path) => ({
     url: SITE.url + path,
     lastModified: now,
-    changeFrequency: path === "" ? "daily" : "weekly",
+    changeFrequency: path === "" || path === "/dokkai" ? "daily" : "weekly",
     priority: path === "" ? 1 : 0.7,
   }));
   const detail = (paths: string[]): MetadataRoute.Sitemap =>
@@ -20,6 +23,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...staticRoutes,
     ...detail(KANJI.map((k) => "/kanji/" + k.id)),
     ...detail(GRAMMAR.map((g) => "/bunpou/" + g.slug)),
-    ...detail(ALL_READINGS.map((r) => "/dokkai/" + r.slug)),
+    ...detail(publishedReadings().map((r) => "/dokkai/" + r.slug)),
   ];
 }

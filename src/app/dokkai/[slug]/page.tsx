@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { GRAMMAR } from "@/data";
-import { ALL_READINGS } from "@/data/dokkai";
+import { findReading, isPublished, publishedReadings } from "@/data/dokkai";
 import { pageMetadata } from "@/lib/seo";
 import { stripRuby } from "@/lib/ruby";
 import { kanjiMapsFor, kanjiStatsFor } from "@/lib/kanji-level";
@@ -10,13 +10,17 @@ import { ReadingPlayer, type RelatedGrammar } from "@/components/dokkai/ReadingP
 
 type Props = { params: { slug: string } };
 
+// Halaman dibuat ulang paling lama tiap 1 jam; bacaan yang terbit setelah build dibuat saat pertama dibuka
+export const revalidate = 3600;
+export const dynamicParams = true;
+
 export function generateStaticParams() {
-  return ALL_READINGS.map((r) => ({ slug: r.slug }));
+  return publishedReadings().map((r) => ({ slug: r.slug }));
 }
 
 export function generateMetadata({ params }: Props): Metadata {
-  const r = ALL_READINGS.find((x) => x.slug === params.slug);
-  if (!r) return { title: "Bacaan tidak ditemukan" };
+  const r = findReading(params.slug);
+  if (!r || !isPublished(r)) return { title: "Bacaan tidak ditemukan" };
   return pageMetadata({
     title: "Dokkai " + r.level + ": " + stripRuby(r.title),
     description: "Latihan membaca bahasa Jepang level " + r.level + " (± " + r.minutes + " menit) dengan furigana, warna level kanji, dan pertanyaan pemahaman.",
@@ -25,8 +29,9 @@ export function generateMetadata({ params }: Props): Metadata {
 }
 
 export default function DokkaiDetailPage({ params }: Props) {
-  const r = ALL_READINGS.find((x) => x.slug === params.slug);
-  if (!r) notFound();
+  const r = findReading(params.slug);
+  // Bacaan yang belum terbit tidak bisa dibuka lewat URL
+  if (!r || !isPublished(r)) notFound();
 
   const texts = [r.title, ...r.paragraphs];
   const { levels, links } = kanjiMapsFor([...texts, ...r.questions.map((q) => q.prompt)]);
