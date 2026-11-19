@@ -4,7 +4,7 @@ import type { NewsReading, QueuedReading } from "./types";
 /* ════════════════ PENGATURAN JADWAL TERBIT ════════════════ */
 
 /** Tanggal terbit bacaan PERTAMA di antrean (YYYY-MM-DD). Jangan diubah setelah ada bacaan yang terbit. */
-export const QUEUE_START_DATE = "2026-12-01";
+export const QUEUE_START_DATE = "2026-11-20";
 /** Jumlah bacaan baru per level per hari. */
 export const PER_DAY_PER_LEVEL = 2;
 /** Zona waktu penentu "hari ini" (bacaan baru muncul setelah pukul 00.00 di zona ini). */

@@ -14,16 +14,8 @@ export const metadata: Metadata = pageMetadata({
 // Selalu dihitung ulang per permintaan agar bacaan yang baru terbit langsung tampil
 export const dynamic = "force-dynamic";
 
-/** Validasi ?page= : hanya bilangan bulat 1–9999, selain itu dianggap 1. */
-function parsePageParam(value: string | string[] | undefined): number {
-  const v = Array.isArray(value) ? value[0] : value;
-  const n = v && /^\d{1,4}$/.test(v) ? Number(v) : 1;
-  return n >= 1 ? n : 1;
-}
-
-export default function DokkaiPage({ searchParams }: { searchParams: { level?: string | string[]; page?: string | string[] } }) {
+export default function DokkaiPage({ searchParams }: { searchParams: { level?: string | string[] } }) {
   const initialLevel = parseLevelParam(searchParams.level);
-  const initialPage = parsePageParam(searchParams.page);
   const items: DokkaiListItem[] = publishedReadings().map((r) => ({
     slug: r.slug,
     title: r.title,
@@ -44,7 +36,7 @@ export default function DokkaiPage({ searchParams }: { searchParams: { level?: s
         </h1>
         <p className="mt-1 text-ink-muted">Bacaan singkat bergaya berita, bertambah setiap hari. Garis warna di bawah kanji menunjukkan level JLPT-nya.</p>
       </header>
-      <DokkaiList key={initialLevel} items={items} kanjiLevels={levels} initialLevel={initialLevel} initialPage={initialPage} />
+      <DokkaiList key={initialLevel} items={items} kanjiLevels={levels} initialLevel={initialLevel} />
     </div>
   );
 }
