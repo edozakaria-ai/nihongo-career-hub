@@ -5,6 +5,7 @@ import { GRAMMAR as CURATED_GRAMMAR } from "./grammar";
 import { OPEN_KANJI, OPEN_VOCABULARY } from "./open";
 import { GRAMMAR_N5 } from "./open/grammar-n5";
 import { GRAMMAR_N4 } from "./open/grammar-n4";
+import { GRAMMAR_N3 } from "./open/grammar-n3";
 
 export { READINGS } from "./readings";
 export { QUESTIONS } from "./questions";
@@ -41,7 +42,7 @@ export const KANJI: Kanji[] = [
 const seenGrammar = new Set(CURATED_GRAMMAR.map((g) => g.slug));
 export const GRAMMAR: GrammarPoint[] = [
   ...CURATED_GRAMMAR,
-  ...[...GRAMMAR_N5, ...GRAMMAR_N4].filter((g) => {
+    ...[...GRAMMAR_N5, ...GRAMMAR_N4, ...GRAMMAR_N3].filter((g) => {
     if (seenGrammar.has(g.slug)) return false;
     seenGrammar.add(g.slug);
     return true;
