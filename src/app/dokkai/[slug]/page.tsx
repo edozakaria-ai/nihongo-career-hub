@@ -1,48 +1,45 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { READINGS } from "@/data";
+import { GRAMMAR } from "@/data";
+import { ALL_READINGS } from "@/data/dokkai";
 import { pageMetadata } from "@/lib/seo";
 import { stripRuby } from "@/lib/ruby";
-import { Badge, LevelBadge } from "@/components/ui/Badge";
+import { kanjiMapsFor, kanjiStatsFor } from "@/lib/kanji-level";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { Furigana } from "@/components/ui/Furigana";
-import { ReadingPlayer } from "@/components/dokkai/ReadingPlayer";
+import { ReadingPlayer, type RelatedGrammar } from "@/components/dokkai/ReadingPlayer";
 
 type Props = { params: { slug: string } };
 
 export function generateStaticParams() {
-  return READINGS.map((r) => ({ slug: r.slug }));
+  return ALL_READINGS.map((r) => ({ slug: r.slug }));
 }
 
 export function generateMetadata({ params }: Props): Metadata {
-  const r = READINGS.find((x) => x.slug === params.slug);
+  const r = ALL_READINGS.find((x) => x.slug === params.slug);
   if (!r) return { title: "Bacaan tidak ditemukan" };
   return pageMetadata({
-    title: `Dokkai ${r.level}: ${stripRuby(r.title)}`,
-    description: `Latihan membaca bahasa Jepang level ${r.level} (± ${r.minutes} menit) dengan furigana opsional, kosakata penting, dan ${r.questions.length} pertanyaan pemahaman.`,
-    path: `/dokkai/${r.slug}`,
+    title: "Dokkai " + r.level + ": " + stripRuby(r.title),
+    description: "Latihan membaca bahasa Jepang level " + r.level + " (± " + r.minutes + " menit) dengan furigana, warna level kanji, dan pertanyaan pemahaman.",
+    path: "/dokkai/" + r.slug,
   });
 }
 
 export default function DokkaiDetailPage({ params }: Props) {
-  const r = READINGS.find((x) => x.slug === params.slug);
+  const r = ALL_READINGS.find((x) => x.slug === params.slug);
   if (!r) notFound();
+
+  const texts = [r.title, ...r.paragraphs];
+  const { levels, links } = kanjiMapsFor([...texts, ...r.questions.map((q) => q.prompt)]);
+  const stats = kanjiStatsFor(texts);
+  const grammar: RelatedGrammar[] = r.grammar
+    .map((slug) => GRAMMAR.find((g) => g.slug === slug))
+    .filter((g): g is NonNullable<typeof g> => !!g)
+    .map((g) => ({ slug: g.slug, pattern: g.pattern, meaning: g.meaning, level: g.level }));
 
   return (
     <div className="container py-8 sm:py-10">
       <Breadcrumb items={[{ href: "/", label: "Beranda" }, { href: "/dokkai", label: "Dokkai" }, { label: stripRuby(r.title) }]} />
-      <header className="mb-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <LevelBadge level={r.level} />
-          <Badge>⏱ ± {r.minutes} menit</Badge>
-          <Badge>Kesulitan {r.difficulty}/5</Badge>
-          <Badge tone="info">Bacaan buatan platform</Badge>
-        </div>
-        <h1 className="mt-3 text-2xl font-extrabold leading-loose text-ink sm:text-3xl">
-          <Furigana text={r.title} />
-        </h1>
-      </header>
-      <ReadingPlayer lesson={r} />
+      <ReadingPlayer lesson={r} kanjiLevels={levels} kanjiLinks={links} stats={stats} grammar={grammar} />
     </div>
   );
 }
