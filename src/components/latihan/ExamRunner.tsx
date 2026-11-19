@@ -3,7 +3,20 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { QuestionCategory } from "@/lib/types";
-import { CATEGORY_LABEL, estimatedCount, examConfig, moduleHref, type ExamConfig, type ExamMode, type ExamPassage, type ExamPool, type ExamQuestion } from "@/lib/exam";
+import {
+  CATEGORY_LABEL,
+  REAL_BREAKDOWN,
+  estimatedCount,
+  examConfig,
+  moduleHref,
+  pickReading,
+  shuffle,
+  type ExamConfig,
+  type ExamMode,
+  type ExamPassage,
+  type ExamPool,
+  type ExamQuestion,
+} from "@/lib/exam";
 import type { ExamAttempt } from "@/lib/gamification";
 import { XP, addActivity, recordResults, saveExamAttempt } from "@/lib/progress";
 import { ChoiceQuestion } from "@/components/learn/ChoiceQuestion";
@@ -31,28 +44,31 @@ interface Summary extends ExamAttempt {
   auto: boolean;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+function sectionQuestions(s: Section): ExamQuestion[] {
+  return [...s.passages.flatMap((p) => p.questions), ...s.questions];
 }
 
 function buildPaper(pool: ExamPool, c: ExamConfig): Paper {
+  // Membaca: utamakan bacaan dokkai; soal membaca lepas (kurasi) mengisi sisanya
+  const passages = pickReading(pool.passages, c.membaca);
+  const fromPassages = passages.reduce((s, p) => s + p.questions.length, 0);
   const sections: Section[] = [
     { category: "kanji" as QuestionCategory, questions: shuffle(pool.kanji).slice(0, c.kanji), passages: [] },
     { category: "kosakata" as QuestionCategory, questions: shuffle(pool.kosakata).slice(0, c.kosakata), passages: [] },
     { category: "tata-bahasa" as QuestionCategory, questions: shuffle(pool.tataBahasa).slice(0, c.grammar), passages: [] },
-    { category: "membaca" as QuestionCategory, questions: shuffle(pool.membaca).slice(0, c.membaca), passages: shuffle(pool.passages).slice(0, c.passages) },
+    { category: "membaca" as QuestionCategory, questions: shuffle(pool.membaca).slice(0, Math.max(0, c.membaca - fromPassages)), passages },
   ].filter((s) => s.questions.length > 0 || s.passages.length > 0);
-  const all = sections.flatMap((s) => sectionQuestions(s));
-  return { sections, all, startedAt: Date.now() };
-}
-
-function sectionQuestions(s: Section): ExamQuestion[] {
-  return [...s.passages.flatMap((p) => p.questions), ...s.questions];
+  // Acak urutan pilihan jawaban setiap sesi
+  const remix = (q: ExamQuestion): ExamQuestion => {
+    const order = shuffle(q.options.map((_, i) => i));
+    return { ...q, options: order.map((i) => q.options[i]), answerIndex: order.indexOf(q.answerIndex) };
+  };
+  const mixed = sections.map((s) => ({
+    ...s,
+    questions: s.questions.map(remix),
+    passages: s.passages.map((p) => ({ ...p, questions: p.questions.map(remix) })),
+  }));
+  return { sections: mixed, all: mixed.flatMap(sectionQuestions), startedAt: Date.now() };
 }
 
 function fmtTime(sec: number): string {
@@ -76,7 +92,8 @@ export function ExamRunner({ pool, mode }: { pool: ExamPool; mode: ExamMode }) {
   const finishedRef = useRef(false);
   const topRef = useRef<HTMLDivElement>(null);
 
-  const poolSize = pool.kanji.length + pool.kosakata.length + pool.tataBahasa.length + pool.membaca.length + pool.passages.length;
+  const readingInPool = pool.membaca.length + pool.passages.reduce((s, p) => s + p.questions.length, 0);
+  const poolSize = pool.kanji.length + pool.kosakata.length + pool.tataBahasa.length + readingInPool;
 
   const finish = useCallback(
     (auto: boolean) => {
@@ -114,13 +131,13 @@ export function ExamRunner({ pool, mode }: { pool: ExamPool; mode: ExamMode }) {
     [paper, pool.level, mode, cfg.minutes],
   );
 
-  // Timer
   useEffect(() => {
     if (phase !== "running" || !paper) return;
     const end = paper.startedAt + cfg.minutes * 60_000;
     const tick = () => {
       const left = Math.max(0, Math.round((end - Date.now()) / 1000));
       setRemaining(left);
+      if (left === 600) setAlert("Sisa waktu 10 menit.");
       if (left === 300) setAlert("Sisa waktu 5 menit.");
       if (left === 60) setAlert("Sisa waktu 1 menit.");
       if (left <= 0) finish(true);
@@ -130,7 +147,6 @@ export function ExamRunner({ pool, mode }: { pool: ExamPool; mode: ExamMode }) {
     return () => window.clearInterval(id);
   }, [phase, paper, finish, cfg.minutes]);
 
-  // Peringatan sebelum menutup halaman saat ujian berlangsung
   useEffect(() => {
     if (phase !== "running") return;
     const warn = (e: BeforeUnloadEvent) => {
@@ -160,27 +176,30 @@ export function ExamRunner({ pool, mode }: { pool: ExamPool; mode: ExamMode }) {
 
   /* ════════ KONFIRMASI SEBELUM MULAI ════════ */
   if (phase === "ready" || !paper) {
-    const parts: [string, number][] = [
-      ["Kanji", cfg.kanji],
-      ["Kosakata", cfg.kosakata],
-      ["Tata bahasa", cfg.grammar],
-      ["Membaca", cfg.passages + cfg.membaca],
+    const parts: [QuestionCategory, number][] = [
+      ["kanji", cfg.kanji],
+      ["kosakata", cfg.kosakata],
+      ["tata-bahasa", cfg.grammar],
+      ["membaca", cfg.membaca],
     ];
+    const breakdown = mode === "real" ? REAL_BREAKDOWN[pool.level] : null;
     return (
       <div ref={topRef} className="scroll-mt-28 space-y-6">
-        <section aria-labelledby="ready-title" className="rounded-card border border-line bg-surface p-6 text-center shadow-card sm:p-8">
-          <div className="flex justify-center">
-            <LevelBadge level={pool.level} className="h-10 min-w-[4rem] text-base" />
+        <section aria-labelledby="ready-title" className="rounded-card border border-line bg-surface p-6 shadow-card sm:p-8">
+          <div className="text-center">
+            <div className="flex justify-center">
+              <LevelBadge level={pool.level} className="h-10 min-w-[4rem] text-base" />
+            </div>
+            <h2 id="ready-title" className="mt-4 text-2xl font-extrabold text-ink">
+              {cfg.label} {pool.level}
+            </h2>
+            <p className="mt-1 text-ink-muted">{cfg.tagline}</p>
           </div>
-          <h2 id="ready-title" className="mt-4 text-2xl font-extrabold text-ink">
-            {cfg.label} {pool.level}
-          </h2>
-          <p className="mt-1 text-ink-muted">{cfg.tagline}</p>
 
-          <dl className="mx-auto mt-6 grid max-w-md grid-cols-2 gap-3">
+          <dl className="mx-auto mt-6 grid max-w-md grid-cols-2 gap-3 text-center">
             <div className="rounded-lg bg-surface-muted p-3">
               <dt className="text-xs text-ink-muted">Jumlah soal</dt>
-              <dd className="text-2xl font-extrabold text-ink">± {estimatedCount(cfg)}</dd>
+              <dd className="text-2xl font-extrabold text-ink">{estimatedCount(cfg)}</dd>
             </div>
             <div className="rounded-lg bg-surface-muted p-3">
               <dt className="text-xs text-ink-muted">Waktu</dt>
@@ -188,20 +207,39 @@ export function ExamRunner({ pool, mode }: { pool: ExamPool; mode: ExamMode }) {
             </div>
           </dl>
 
-          <ul className="mx-auto mt-4 flex max-w-md flex-wrap justify-center gap-2 text-sm">
-            {parts
-              .filter(([, n]) => n > 0)
-              .map(([name, n], i) => (
-                <li key={name} className="rounded-full border border-line px-3 py-1 text-ink">
-                  Bagian {i + 1}: {name} <span className="text-ink-muted">({name === "Membaca" ? n + " teks/soal" : n})</span>
-                </li>
-              ))}
-          </ul>
+          <div className="mx-auto mt-6 max-w-xl overflow-x-auto">
+            <table className="w-full text-sm">
+              <caption className="sr-only">Susunan soal</caption>
+              <thead>
+                <tr className="border-b border-line text-left text-ink-muted">
+                  <th className="py-2 pr-2 font-semibold">Bagian</th>
+                  {breakdown && <th className="py-2 pr-2 font-semibold">Jenis soal (目安 JLPT)</th>}
+                  <th className="py-2 text-right font-semibold">Soal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parts.map(([cat, n], i) => (
+                  <tr key={cat} className="border-b border-line last:border-0">
+                    <td className="py-2 pr-2 font-semibold text-ink">
+                      {i + 1}. {CATEGORY_LABEL[cat]}
+                    </td>
+                    {breakdown && (
+                      <td lang="ja" className="py-2 pr-2 font-jp text-xs text-ink-muted">
+                        {breakdown.find((b) => b.group === cat)?.items.map(([name, k]) => name + " " + k).join(" · ")}
+                      </td>
+                    )}
+                    <td className="py-2 text-right font-bold text-ink">{n}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-          <ul className="mx-auto mt-6 max-w-md space-y-1 text-left text-sm text-ink-muted">
+          <ul className="mx-auto mt-6 max-w-xl space-y-1 text-sm text-ink-muted">
             <li>• Timer berjalan setelah tombol mulai ditekan; jawaban dikumpulkan otomatis saat waktu habis.</li>
+            <li>• Soal dan urutan pilihan jawaban diacak setiap kali ujian dimulai.</li>
             <li>• Jawaban dan pembahasan ditampilkan setelah ujian selesai.</li>
-            <li>• Soal diacak setiap kali ujian dimulai.</li>
+            {mode === "real" && <li>• Jumlah soal mengikuti perkiraan resmi JLPT tanpa bagian mendengarkan (choukai); jenis soal disederhanakan ke format pilihan ganda situs ini.</li>}
           </ul>
 
           <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -212,7 +250,11 @@ export function ExamRunner({ pool, mode }: { pool: ExamPool; mode: ExamMode }) {
               Ganti level / skema
             </Link>
           </div>
-          {poolSize === 0 && <p className="mt-3 text-sm text-red-600 dark:text-red-400">Bank soal untuk level ini belum tersedia.</p>}
+          {readingInPool < cfg.membaca && (
+            <p className="mt-3 text-center text-xs text-amber-700 dark:text-amber-300">
+              Stok soal membaca {pool.level} saat ini {readingInPool} soal; bagian membaca akan berisi sebanyak yang tersedia.
+            </p>
+          )}
         </section>
       </div>
     );
@@ -346,7 +388,7 @@ export function ExamRunner({ pool, mode }: { pool: ExamPool; mode: ExamMode }) {
         return (
           <section key={s.category} aria-labelledby={"sec-" + s.category} className="space-y-4">
             <h2 id={"sec-" + s.category} className="text-lg font-extrabold text-ink">
-              Bagian {si + 1} · {CATEGORY_LABEL[s.category]}
+              Bagian {si + 1} · {CATEGORY_LABEL[s.category]} <span className="text-sm font-normal text-ink-muted">({qs.length} soal)</span>
             </h2>
             {s.passages.map((p) => (
               <div key={p.slug} className="space-y-4">
@@ -358,6 +400,7 @@ export function ExamRunner({ pool, mode }: { pool: ExamPool; mode: ExamMode }) {
                     <div className="space-y-3 text-lg leading-[2.3] text-ink">
                       {p.paragraphs.map((para, i) => (
                         <p key={i}>
+                          <span className="mr-1 text-xs font-bold text-ink-muted">[{i + 1}]</span>
                           <Furigana text={para} />
                         </p>
                       ))}

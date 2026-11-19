@@ -21,12 +21,12 @@ export function QuestionStem({ text }: { text: string }) {
   );
 }
 
-/** Pertanyaan + stem. Pertanyaan berbahasa Jepang berfurigana (dari dokkai) dirender dengan Furigana. */
+/** Pertanyaan + stem. Pertanyaan berfurigana (dari dokkai) dirender dengan Furigana. */
 export function QuestionText({ q, number }: { q: ExamQuestion; number?: number }) {
   return (
     <>
       {number !== undefined && <span className="mr-1 text-ink-muted">{number}.</span>}
-      {q.prompt.includes("{") || JA.test(q.prompt) ? <Furigana text={q.prompt} className="text-lg leading-loose" /> : <span>{q.prompt}</span>}
+      {q.prompt.includes("{") ? <Furigana text={q.prompt} className="text-lg leading-loose" /> : <span>{q.prompt}</span>}
       {q.stem && <QuestionStem text={q.stem} />}
     </>
   );

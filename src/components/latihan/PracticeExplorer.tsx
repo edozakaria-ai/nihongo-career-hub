@@ -1,38 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { JlptLevel, QuestionCategory } from "@/lib/types";
-import { CATEGORY_LABEL, type ExamQuestion } from "@/lib/exam";
+import { CATEGORY_LABEL, shuffle, type ExamPool, type ExamQuestion } from "@/lib/exam";
 import { XP, addActivity, recordResults } from "@/lib/progress";
 import { ChoiceQuestion } from "@/components/learn/ChoiceQuestion";
 import { Badge, LevelBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { LevelFilter, countByLevel, type LevelValue } from "@/components/ui/LevelFilter";
+import { Furigana } from "@/components/ui/Furigana";
+import { buttonClass } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { QuestionText } from "./QuestionStem";
 
+const LEVELS: JlptLevel[] = ["N5", "N4", "N3", "N2"];
+const CATS: QuestionCategory[] = ["kanji", "kosakata", "tata-bahasa", "membaca"];
 const BATCH = 10;
 
+function flatten(pool: ExamPool): Record<QuestionCategory, ExamQuestion[]> {
+  return {
+    kanji: pool.kanji,
+    kosakata: pool.kosakata,
+    "tata-bahasa": pool.tataBahasa,
+    membaca: [...pool.membaca, ...pool.passages.flatMap((p) => p.questions)],
+  };
+}
+
 /**
- * Mode latihan per topik: filter level & kategori, jawab per soal, skor sesi,
- * daftar jawaban salah (tersimpan untuk diulang), dan XP.
+ * Latihan per topik satu level: bank ±100 soal per kategori, diacak ulang setiap sesi
+ * di browser (urutan soal & pilihan jawaban). Jawaban salah tersimpan untuk diulang.
  */
-export function PracticeExplorer({ questions, initialLevel }: { questions: ExamQuestion[]; initialLevel: JlptLevel | "all" }) {
-  const [level, setLevel] = useState<LevelValue>(initialLevel);
-  const [category, setCategory] = useState<QuestionCategory | "all">("all");
+export function PracticeExplorer({ pool }: { pool: ExamPool }) {
+  const byCat = useMemo(() => flatten(pool), [pool]);
+  const passages = useMemo(() => new Map(pool.passages.map((p) => [p.slug, p])), [pool]);
+  const [category, setCategory] = useState<QuestionCategory>("kanji");
+  const [order, setOrder] = useState<ExamQuestion[]>(byCat.kanji);
   const [results, setResults] = useState<Record<string, boolean>>({});
-  const [round, setRound] = useState(0);
   const [visible, setVisible] = useState(BATCH);
+  const [round, setRound] = useState(0);
 
-  const byCategory = useMemo(() => (category === "all" ? questions : questions.filter((q) => q.category === category)), [questions, category]);
-  const levelCounts = useMemo(() => countByLevel(byCategory), [byCategory]);
-  const list = byCategory.filter((q) => level === "all" || q.level === level);
-  const shown = list.slice(0, visible);
+  // Acak setiap kali kategori diganti / sesi diulang (hanya di browser → tanpa hydration mismatch)
+  useEffect(() => {
+    const remix = (q: ExamQuestion): ExamQuestion => {
+      const idx = shuffle(q.options.map((_, i) => i));
+      return { ...q, options: idx.map((i) => q.options[i]), answerIndex: idx.indexOf(q.answerIndex) };
+    };
+    setOrder(shuffle(byCat[category]).map(remix));
+    setVisible(BATCH);
+  }, [byCat, category, round]);
 
-  const answered = list.filter((q) => results[q.id] !== undefined);
+  const shown = order.slice(0, visible);
+  const answered = order.filter((q) => results[q.id] !== undefined);
   const correct = answered.filter((q) => results[q.id]).length;
-  const wrong = answered.filter((q) => !results[q.id]);
 
   function onAnswered(q: ExamQuestion, ok: boolean) {
     setResults((r) => ({ ...r, [q.id]: ok }));
@@ -40,90 +59,112 @@ export function PracticeExplorer({ questions, initialLevel }: { questions: ExamQ
     recordResults([{ q, correct: ok }]);
   }
 
-  function changeLevel(lv: LevelValue) {
-    setLevel(lv);
-    setVisible(BATCH);
-  }
-
-  function changeCategory(c: QuestionCategory | "all") {
-    setCategory(c);
-    setVisible(BATCH);
-  }
-
   function restart() {
     setResults({});
     setRound((r) => r + 1);
-    setVisible(BATCH);
   }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
       <div>
         <div className="space-y-4 rounded-card border border-line bg-surface p-4 shadow-card">
-          <LevelFilter value={level} onChange={changeLevel} counts={levelCounts} />
-          <div role="group" aria-label="Filter kategori soal" className="flex flex-wrap gap-2">
-            {(["all", "kanji", "kosakata", "tata-bahasa", "membaca"] as (QuestionCategory | "all")[]).map((c) => (
+          <nav aria-label="Level" className="flex flex-wrap gap-2">
+            {LEVELS.map((lv) => (
+              <Link
+                key={lv}
+                href={"/latihan/topik?level=" + lv}
+                aria-current={lv === pool.level ? "page" : undefined}
+                className={cn(
+                  "inline-flex h-9 items-center rounded-full border px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500",
+                  lv === pool.level ? "border-brand-500 bg-brand-500 text-white" : "border-line bg-surface text-ink hover:border-brand-400",
+                )}
+              >
+                {lv}
+              </Link>
+            ))}
+          </nav>
+          <div role="radiogroup" aria-label="Kategori soal" className="flex flex-wrap gap-2">
+            {CATS.map((c) => (
               <button
                 key={c}
                 type="button"
-                aria-pressed={category === c}
-                onClick={() => changeCategory(c)}
+                role="radio"
+                aria-checked={category === c}
+                onClick={() => setCategory(c)}
                 className={cn(
-                  "h-8 rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500",
+                  "h-9 rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500",
                   category === c ? "bg-brand-50 text-brand-700 ring-1 ring-brand-300 dark:bg-brand-500/15 dark:text-brand-200" : "text-ink-muted hover:bg-surface-muted hover:text-ink",
                 )}
               >
-                {c === "all" ? "Semua kategori" : CATEGORY_LABEL[c]}
+                {CATEGORY_LABEL[c]} <span className="text-xs opacity-70">({byCat[c].length})</span>
               </button>
             ))}
           </div>
         </div>
 
-        <p className="my-4 text-sm text-ink-muted" aria-live="polite">
-          <strong className="text-ink">{list.length}</strong> soal tersedia · soal berganti setiap hari
-        </p>
+        <div className="my-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-ink-muted" aria-live="polite">
+            <strong className="text-ink">{order.length}</strong> soal {CATEGORY_LABEL[category].toLowerCase()} {pool.level} · urutan diacak setiap sesi
+          </p>
+          <button type="button" onClick={restart} className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-300">
+            🔀 Acak ulang
+          </button>
+        </div>
 
-        {list.length === 0 ? (
-          <EmptyState title="Belum ada soal untuk filter ini" description="Pilih level atau kategori lain." />
+        {order.length === 0 ? (
+          <EmptyState title="Belum ada soal untuk kategori ini" description="Pilih kategori lain atau level lain." />
         ) : (
           <>
             <ol className="space-y-5">
-              {shown.map((q, i) => (
-                <li key={q.id + "-" + round} className="rounded-card border border-line bg-surface p-5 shadow-card">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-bold text-ink-muted">Soal {i + 1}</span>
-                    <LevelBadge level={q.level} />
-                    <Badge>{CATEGORY_LABEL[q.category]}</Badge>
-                    <Badge tone="info">Latihan buatan platform</Badge>
-                  </div>
-                  <ChoiceQuestion
-                    prompt={<QuestionText q={q} />}
-                    options={q.options}
-                    answerIndex={q.answerIndex}
-                    explanation={
-                      <>
-                        {q.explanation}
-                        {q.href && (
-                          <>
-                            {" "}
-                            <Link href={q.href} className="font-semibold underline">Pelajari materinya →</Link>
-                          </>
-                        )}
-                      </>
-                    }
-                    onAnswered={(ok) => onAnswered(q, ok)}
-                  />
-                </li>
-              ))}
+              {shown.map((q, i) => {
+                const p = q.passageSlug ? passages.get(q.passageSlug) : undefined;
+                return (
+                  <li key={q.id + "-" + round} className="rounded-card border border-line bg-surface p-5 shadow-card">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-bold text-ink-muted">Soal {i + 1}</span>
+                      <LevelBadge level={q.level} />
+                      <Badge>{CATEGORY_LABEL[q.category]}</Badge>
+                    </div>
+                    {p && (
+                      <details className="mb-3 rounded-lg border border-brand-200 bg-brand-50/40 p-3 dark:border-brand-500/30 dark:bg-brand-500/5" open>
+                        <summary className="cursor-pointer text-sm font-semibold text-ink">
+                          Bacaan: <Furigana text={p.title} />
+                        </summary>
+                        <div className="mt-2 space-y-2 text-base leading-[2.2] text-ink">
+                          {p.paragraphs.map((para, k) => (
+                            <p key={k}>
+                              <span className="mr-1 text-xs font-bold text-ink-muted">[{k + 1}]</span>
+                              <Furigana text={para} />
+                            </p>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                    <ChoiceQuestion
+                      prompt={<QuestionText q={q} />}
+                      options={q.options.map((o) => <span key={o} lang="ja">{o}</span>)}
+                      answerIndex={q.answerIndex}
+                      explanation={
+                        <>
+                          {q.explanation}
+                          {q.href && (
+                            <>
+                              {" "}
+                              <Link href={q.href} className="font-semibold underline">Pelajari materinya →</Link>
+                            </>
+                          )}
+                        </>
+                      }
+                      onAnswered={(ok) => onAnswered(q, ok)}
+                    />
+                  </li>
+                );
+              })}
             </ol>
-            {visible < list.length && (
+            {visible < order.length && (
               <div className="mt-6 text-center">
-                <button
-                  type="button"
-                  onClick={() => setVisible((v) => v + BATCH)}
-                  className="rounded-lg border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-ink hover:border-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-                >
-                  Tampilkan {Math.min(BATCH, list.length - visible)} soal lagi
+                <button type="button" onClick={() => setVisible((v) => v + BATCH)} className={buttonClass("outline", "md")}>
+                  Tampilkan {Math.min(BATCH, order.length - visible)} soal lagi
                 </button>
               </div>
             )}
@@ -138,28 +179,13 @@ export function PracticeExplorer({ questions, initialLevel }: { questions: ExamQ
             {correct}/{answered.length}
           </p>
           <p className="text-xs text-ink-muted">{answered.length} soal dijawab</p>
-          <button type="button" onClick={restart} className="mt-4 w-full rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink hover:border-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
-            Ulangi dari awal
+          <button type="button" onClick={restart} className={buttonClass("outline", "md", "mt-4 w-full")}>
+            Ulangi dengan urutan baru
           </button>
         </section>
-        <section aria-labelledby="wrong-title" className="rounded-card border border-line bg-surface p-5 shadow-card">
-          <h2 id="wrong-title" className="font-bold text-ink">Jawaban salah sesi ini</h2>
-          {wrong.length === 0 ? (
-            <p className="mt-2 text-sm text-ink-muted">Belum ada. Tetap semangat! 🌸</p>
-          ) : (
-            <ul className="mt-2 space-y-2 text-sm">
-              {wrong.slice(0, 8).map((q) => (
-                <li key={q.id} className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5"><LevelBadge level={q.level} /> {CATEGORY_LABEL[q.category]}</span>
-                  {q.href && <Link href={q.href} className="font-semibold text-brand-600 hover:underline dark:text-brand-300">Pelajari</Link>}
-                </li>
-              ))}
-            </ul>
-          )}
-          <Link href="/latihan/ulang" className="mt-3 inline-block text-sm font-semibold text-brand-600 hover:underline dark:text-brand-300">
-            Ulangi semua jawaban salah →
-          </Link>
-        </section>
+        <Link href="/latihan/ulang" className="block rounded-card border border-line bg-surface p-5 text-sm font-semibold text-brand-600 shadow-card hover:border-brand-300 dark:text-brand-300">
+          🔁 Ulangi semua jawaban salah →
+        </Link>
         <p className="text-xs text-ink-muted">
           Soal disusun otomatis dari materi situs dan soal buatan tim, mengikuti pola kompetensi umum — <strong>bukan</strong> soal resmi JLPT.
         </p>

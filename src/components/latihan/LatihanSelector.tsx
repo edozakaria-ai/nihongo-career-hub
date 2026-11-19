@@ -20,8 +20,8 @@ const LEVELS: { level: JlptLevel; title: string; desc: string }[] = [
 ];
 
 const MODES: { mode: ExamMode; icon: string; points: string[] }[] = [
-  { mode: "mini", icon: "⚡", points: ["Kanji, kosakata, tata bahasa, 1 bacaan", "Cocok untuk latihan harian"] },
-  { mode: "real", icon: "📝", points: ["4 bagian lengkap: kanji, kosakata, tata bahasa, membaca", "Timer, kumpul otomatis, analisis per bagian"] },
+  { mode: "mini", icon: "⚡", points: ["5 soal per bagian: kanji, kosakata, tata bahasa, membaca", "Cocok untuk latihan harian"] },
+  { mode: "real", icon: "📝", points: ["Jumlah soal sama dengan perkiraan resmi JLPT (tanpa choukai)", "90 menit, kumpul otomatis, analisis per bagian"] },
 ];
 
 /** Layar awal Latihan JLPT: pilih level → pilih skema → mulai. */
@@ -36,8 +36,7 @@ export function LatihanSelector({ initialLevel }: { initialLevel: JlptLevel | nu
   function best(lv: JlptLevel, m: ExamMode): string | null {
     const list = exams.filter((e) => e.level === lv && (m === "real" ? e.mode === "real" || e.mode === "standar" : e.mode === "mini"));
     if (list.length === 0) return null;
-    const top = Math.max(...list.map((e) => Math.round((e.score / Math.max(1, e.total)) * 100)));
-    return top + "%";
+    return Math.max(...list.map((e) => Math.round((e.score / Math.max(1, e.total)) * 100))) + "%";
   }
 
   function start() {
@@ -45,10 +44,10 @@ export function LatihanSelector({ initialLevel }: { initialLevel: JlptLevel | nu
   }
 
   const step = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold";
+  const chosen = level && mode ? examConfig(mode, level) : null;
 
   return (
     <div className="space-y-6">
-      {/* Langkah 1 */}
       <section aria-labelledby="step1" className="rounded-card border border-line bg-surface p-5 shadow-card sm:p-6">
         <h2 id="step1" className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
           <span className={cn(step, "bg-brand-500 text-white")}>1</span> Pilih level
@@ -80,11 +79,7 @@ export function LatihanSelector({ initialLevel }: { initialLevel: JlptLevel | nu
         </div>
       </section>
 
-      {/* Langkah 2 */}
-      <section
-        aria-labelledby="step2"
-        className={cn("rounded-card border border-line bg-surface p-5 shadow-card transition sm:p-6", !level && "opacity-60")}
-      >
+      <section aria-labelledby="step2" className={cn("rounded-card border border-line bg-surface p-5 shadow-card transition sm:p-6", !level && "opacity-60")}>
         <h2 id="step2" className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
           <span className={cn(step, level ? "bg-brand-500 text-white" : "bg-surface-muted text-ink-muted")}>2</span> Pilih skema
         </h2>
@@ -116,10 +111,13 @@ export function LatihanSelector({ initialLevel }: { initialLevel: JlptLevel | nu
                   </span>
                   <span className="mt-1 text-sm text-ink-muted">{cfg.tagline}</span>
                   <span className="mt-4 flex flex-wrap gap-2 text-sm">
-                    <span className="rounded-full bg-surface-muted px-3 py-1 font-semibold text-ink">± {estimatedCount(cfg)} soal</span>
+                    <span className="rounded-full bg-surface-muted px-3 py-1 font-semibold text-ink">{estimatedCount(cfg)} soal</span>
                     <span className="rounded-full bg-surface-muted px-3 py-1 font-semibold text-ink">⏱ {cfg.minutes} menit</span>
                   </span>
-                  <ul className="mt-4 space-y-1 text-sm text-ink">
+                  <span className="mt-3 text-xs text-ink-muted">
+                    Kanji {cfg.kanji} · Kosakata {cfg.kosakata} · Tata bahasa {cfg.grammar} · Membaca {cfg.membaca}
+                  </span>
+                  <ul className="mt-3 space-y-1 text-sm text-ink">
                     {m.points.map((p) => (
                       <li key={p} className="flex gap-2">
                         <span aria-hidden="true" className="text-brand-500">•</span>
@@ -135,12 +133,11 @@ export function LatihanSelector({ initialLevel }: { initialLevel: JlptLevel | nu
         )}
       </section>
 
-      {/* Mulai */}
       <div className="flex flex-col items-center gap-2 rounded-card border border-line bg-surface p-5 text-center shadow-card sm:flex-row sm:justify-between sm:text-left">
         <p className="text-sm text-ink" aria-live="polite">
-          {level && mode ? (
+          {chosen && level ? (
             <>
-              Siap memulai <strong>{examConfig(mode, level).label} {level}</strong> — {examConfig(mode, level).minutes} menit.
+              Siap memulai <strong>{chosen.label} {level}</strong> — {estimatedCount(chosen)} soal, {chosen.minutes} menit.
             </>
           ) : (
             "Pilih level dan skema untuk memulai."
@@ -151,17 +148,16 @@ export function LatihanSelector({ initialLevel }: { initialLevel: JlptLevel | nu
         </button>
       </div>
 
-      {/* Pilihan lain */}
       <section aria-labelledby="other" className="grid gap-4 sm:grid-cols-2">
         <h2 id="other" className="sr-only">Pilihan latihan lain</h2>
         <Link
-          href={"/latihan/topik" + (level ? "?level=" + level : "")}
+          href={"/latihan/topik?level=" + (level ?? "N5")}
           className="group flex items-start gap-4 rounded-card border border-line bg-surface p-5 shadow-card transition hover:border-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
           <span aria-hidden="true" className="text-3xl">🎯</span>
           <span>
             <span className="block font-bold text-ink group-hover:text-brand-600">Latihan per topik</span>
-            <span className="text-sm text-ink-muted">Tanpa timer. Pilih kategori kanji, kosakata, tata bahasa, atau membaca.</span>
+            <span className="text-sm text-ink-muted">Tanpa timer. ±100 soal per kategori, diacak setiap sesi.</span>
           </span>
         </Link>
         <Link
@@ -177,8 +173,8 @@ export function LatihanSelector({ initialLevel }: { initialLevel: JlptLevel | nu
       </section>
 
       <p className="text-xs text-ink-muted">
-        Soal disusun dari materi situs dan soal buatan tim Nihongo Career Hub. Real Test mengikuti perkiraan durasi bagian pengetahuan bahasa dan membaca
-        (tanpa choukai) — <strong>bukan</strong> soal maupun format resmi JLPT.
+        Soal disusun dari materi situs dan soal buatan tim Nihongo Career Hub. Real Test mengikuti perkiraan jumlah soal resmi JLPT untuk bagian
+        pengetahuan bahasa dan membaca (tanpa choukai) dengan waktu 90 menit — <strong>bukan</strong> soal resmi JLPT.
       </p>
     </div>
   );
