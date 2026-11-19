@@ -3,6 +3,7 @@ import { READINGS } from "@/data";
 import type { NewsReading } from "./types";
 import { ARTICLES } from "./articles";
 import { QUEUE } from "./queue";
+import { QUEUE_2 } from "./queue-2";
 import { scheduleQueue, todayISO } from "./schedule";
 
 export type { NewsReading, QueuedReading } from "./types";
@@ -29,7 +30,8 @@ const LEGACY: NewsReading[] = READINGS.map((r) => ({
 function merge(): NewsReading[] {
   const seen = new Set<string>();
   const out: NewsReading[] = [];
-  for (const r of [...ARTICLES, ...scheduleQueue(QUEUE), ...LEGACY]) {
+  // Urutan antrean menentukan tanggal terbit: minggu 1 (QUEUE) lalu minggu 2 (QUEUE_2), dst.
+  for (const r of [...ARTICLES, ...scheduleQueue([...QUEUE, ...QUEUE_2]), ...LEGACY]) {
     if (seen.has(r.slug)) continue;
     seen.add(r.slug);
     out.push(r);
